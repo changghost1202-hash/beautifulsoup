@@ -46,4 +46,8 @@ python task6.py path/to/your/html/file.html
 ```
 Note: Replace path/to/your/html/file.html with the actual path to your HTML file. Both absolute and relative paths are supported.
 
+Note: This project includes a modified version of BeautifulSoup in the local bs4/ directory. To ensure that Python uses this version instead of an installed version, run the tasks from the project root directory with PYTHONPATH=.. For example:
+```
+PYTHONPATH=../.. python task6.py path/to/your/html/file.html
+```
 The output file, output6.html, will be saved in the current working directory.
