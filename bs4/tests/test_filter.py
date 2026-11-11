@@ -288,6 +288,99 @@ class TestSoupReplacer:
         assert soup.p.b is None
         assert soup.p.blockquote is not None
         assert soup.p.blockquote.get_text() == "world"
+    def test_name_xformer(self):
+        html = "<b>Hello</b>"
+
+        def change_name(tag):
+            if tag.name == "b":
+                return "blockquote"
+            return tag.name
+
+        replacer = SoupReplacer(name_xformer=change_name)
+        soup = BeautifulSoup(html, "html.parser", replacer=replacer)
+
+        assert soup.blockquote is not None
+        assert soup.blockquote.string == "Hello"
+        assert soup.b is None
+    def test_attrs_xformer(self):
+        html = '<p class="old">Hello</p>'
+
+        def change_attrs(tag):
+            attrs = dict(tag.attrs)
+            if tag.name == "p":
+                attrs["class"] = ["new"]
+            return attrs
+
+        replacer = SoupReplacer(attrs_xformer=change_attrs)
+        soup = BeautifulSoup(html, "html.parser", replacer=replacer)
+
+        assert soup.p["class"] == ["new"]
+    # Test 3: General Transformer
+    def test_xformer(self):
+        html = '<p class="old" id="123">Hello</p>'
+
+        def remove_class(tag):
+            tag.attrs.pop("class", None)
+
+        replacer = SoupReplacer(xformer=remove_class)
+        soup = BeautifulSoup(html, "html.parser", replacer=replacer)
+
+        assert "class" not in soup.p.attrs
+        assert soup.p["id"] == "123"
+    # Test 4: Combined Transformers
+    def test_combined_transformers(self):
+        html = '<b class="old">Hello</b>'
+
+        def change_name(tag):
+            return "strong" if tag.name == "b" else tag.name
+
+        def change_attrs(tag):
+            attrs = dict(tag.attrs)
+            attrs["class"] = ["new"]
+            return attrs
+
+        replacer = SoupReplacer(
+            name_xformer=change_name,
+            attrs_xformer=change_attrs
+        )
+
+        soup = BeautifulSoup(html, "html.parser", replacer=replacer)
+
+        assert soup.strong is not None
+        assert soup.strong["class"] == ["new"]
+        assert soup.strong.string == "Hello"
+
+
+    # Test 5: No Transformers
+    def test_no_transformers(self):
+        html = '<p class="original">Hello</p>'
+
+        replacer = SoupReplacer()
+        soup = BeautifulSoup(html, "html.parser", replacer=replacer)
+
+        assert soup.p is not None
+        assert soup.p["class"] == ["original"]
+        assert soup.p.string == "Hello"
+
+
+    # Test 6: Nested Tags
+    def test_nested_tags(self):
+        html = "<div><b>Hello</b><p>World</p></div>"
+
+        def change_name(tag):
+            if tag.name == "b":
+                return "strong"
+            return tag.name
+
+        replacer = SoupReplacer(name_xformer=change_name)
+        soup = BeautifulSoup(html, "html.parser", replacer=replacer)
+
+        assert soup.div is not None
+        assert soup.div.strong is not None
+        assert soup.div.strong.string == "Hello"
+        assert soup.div.p.string == "World"
+        assert soup.div.strong.parent == soup.div
+        assert soup.div.p.parent == soup.div    
 
 class TestSoupStrainer(SoupTest):
     def test_constructor_string_deprecated_text_argument(self):

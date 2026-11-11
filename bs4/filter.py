@@ -310,15 +310,29 @@ class StringMatchRule(MatchRule):
     function: Optional[_StringMatchFunction]
 
 class SoupReplacer:
-    def __init__(self, original_tag, replacement_tag):
+    def __init__(self, original_tag = None, replacement_tag = None, *, name_xformer=None, attrs_xformer=None, xformer=None):
         self.original_tag = original_tag
         self.replacement_tag = replacement_tag
+
+        self.name_xformer = name_xformer
+        self.attrs_xformer = attrs_xformer
+        self.xformer = xformer
 
     def replace_tag(self, tag_name):
         if tag_name == self.original_tag:
             return self.replacement_tag
         return tag_name
+    
+    def transform(self, tag):
+        if self.name_xformer is not None:
+            tag.name = self.name_xformer(tag)
 
+        if self.attrs_xformer is not None:
+            tag.attrs = self.attrs_xformer(tag)
+
+        if self.xformer is not None:
+            self.xformer(tag)
+            
 class SoupStrainer(ElementFilter):
     """The `ElementFilter` subclass used internally by Beautiful Soup.
 

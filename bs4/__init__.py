@@ -677,10 +677,13 @@ class BeautifulSoup(Tag):
         self.currentTag = None
         self.tagStack = []
         self.open_tag_counter = Counter()
+        # Milestone 3: Store original tag names
+        self._replacer_original_names = {}
         self.preserve_whitespace_tag_stack = []
         self.string_container_stack = []
         self._most_recent_element = None
         self.pushTag(self)
+        
 
     def new_tag(
         self,
@@ -795,8 +798,13 @@ class BeautifulSoup(Tag):
             # Nothing to pop. This shouldn't happen.
             return None
         tag = self.tagStack.pop()
-        if tag.name in self.open_tag_counter:
-            self.open_tag_counter[tag.name] -= 1
+        parse_name = self._replacer_original_names.pop(
+            id(tag), tag.name
+        )
+
+        if parse_name != self.ROOT_TAG_NAME:
+            if parse_name in self.open_tag_counter:
+                self.open_tag_counter[parse_name] -= 1
         if (
             self.preserve_whitespace_tag_stack
             and tag == self.preserve_whitespace_tag_stack[-1]
@@ -819,8 +827,11 @@ class BeautifulSoup(Tag):
             self.currentTag.contents.append(tag)
         self.tagStack.append(tag)
         self.currentTag = self.tagStack[-1]
-        if tag.name != self.ROOT_TAG_NAME:
-            self.open_tag_counter[tag.name] += 1
+        parse_name = self._replacer_original_names.get(
+            id(tag), tag.name
+        )
+        if parse_name != self.ROOT_TAG_NAME:
+            self.open_tag_counter[parse_name] += 1
         if tag.name in self.builder.preserve_whitespace_tags:
             self.preserve_whitespace_tag_stack.append(tag)
         if tag.name in self.builder.string_containers:
@@ -979,7 +990,11 @@ class BeautifulSoup(Tag):
             if not self.open_tag_counter.get(name):
                 break
             t = self.tagStack[i]
-            if name == t.name and nsprefix == t.prefix:
+            parse_name = self._replacer_original_names.get(
+                id(t), t.name
+            )
+
+            if name == parse_name and nsprefix == t.prefix:
                 if inclusivePop:
                     most_recently_popped = self.popTag()
                 break
@@ -1020,6 +1035,9 @@ class BeautifulSoup(Tag):
         """
         # print("Start tag %s: %s" % (name, attrs))
         self.endData()
+
+        # Milestone 3: Save original tag name
+        original_name = name
         if self.replacer is not None:
             name = self.replacer.replace_tag(name)
 
@@ -1049,6 +1067,12 @@ class BeautifulSoup(Tag):
         )
         if tag is None:
             return tag
+
+        # Milestone 3
+        if self.replacer is not None:
+            self._replacer_original_names[id(tag)] = original_name
+            self.replacer.transform(tag)
+        
         if self._most_recent_element is not None:
             self._most_recent_element.next_element = tag
         self._most_recent_element = tag
@@ -1063,8 +1087,6 @@ class BeautifulSoup(Tag):
 
         :meta private:
         """
-        if self.replacer is not None:
-            name = self.replacer.replace_tag(name)
 
         # print("End tag: " + name)
         self.endData()
