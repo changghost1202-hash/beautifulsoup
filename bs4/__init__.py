@@ -491,6 +491,13 @@ class BeautifulSoup(Tag):
         # reference to this object.
         self.markup = None
         self.builder.soup = None
+    def __iter__(self) -> Iterator[PageElement]:
+        """Yield document nodes in depth-first document order, lazily.
+
+        The document object itself is not yielded. Each call returns a fresh
+        iterator; no list of nodes is constructed for traversal.
+        """
+        return self.descendants
 
     def copy_self(self) -> "BeautifulSoup":
         """Create a new BeautifulSoup object with the same TreeBuilder,
